@@ -5,6 +5,7 @@ import zarr
 import time
 from tqdm import tqdm
 import argparse
+from multiprocessing import Pool
 
 parser = argparse.ArgumentParser(description='Convert n5 to knossos')
 parser.add_argument('--n5', type=str, help='Path to n5 container')
@@ -13,7 +14,6 @@ parser.add_argument('--png', type=str, help='png stack output dir')
 parser.add_argument('--knossos', type=str, help='knossos output dir')
 parser.add_argument('--config', type=str, help='knossos config path')
 parser.add_argument('--chunk_size', type=int, help='number of z slices in each chunk', default=500, required=False)
-
 
 def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
     f = zarr.open(input_file, "r")[dataset]
@@ -34,30 +34,34 @@ def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
     n_chunks = int(shape[0]/chunk_size)
     if shape[0] % chunk_size != 0:
         n_chunks += 1
+
+    num_workers = n_chunks
+    pool = Pool(processes=num_workers)  # start 4 worker processes
+    result = []
     for n in range(n_chunks):
         data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
         effective_chunk_size = np.shape(data)[0]
-        print(f"Chunk {n+1}/{n_chunks}")
-        for z in tqdm(range(effective_chunk_size)):
-            start = time.time()
-            arr = data[z, :, :]
-            if verbose:
-                print("Array conversion takes {} s".format(time.time() - start))
-            start = time.time()
-            im = Image.fromarray(arr)
-            if verbose:
-                print("Fromarray takes {} s".format(time.time() - start))
+        result.append(pool.apply_async(write_chunk, (f,n,chunk_size,n_chunks,stack_dir,shape,)))
 
-            start = time.time()
-            z_real = z + effective_chunk_size * n
-            im_name = stack_dir + "/" + "0" * (len(str(shape[0])) - len(str(z_real)) + 1) + str(z_real) + ".png" 
-            if os.path.exists(im_name):
-                if verbose:
-                    print("Skip image")
-                continue
-            im.save(im_name, compression_level=0)
-            if verbose:
-                print("Saving image takes {} s".format(time.time() - start))
+    for res in result:
+        res.get()
+
+    pool.close()
+    pool.join()
+
+def write_chunk(f, n, chunk_size, n_chunks, stack_dir, shape):
+    data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
+    effective_chunk_size = np.shape(data)[0]
+    print(f"Chunk {n+1}/{n_chunks}")
+    for z in tqdm(range(effective_chunk_size)):
+        arr = data[z, :, :]
+        im = Image.fromarray(arr)
+        z_real = z + effective_chunk_size * n
+        im_name = stack_dir + "/" + "0" * (len(str(shape[0])) - len(str(z_real)) + 1) + str(z_real) + ".png" 
+        if os.path.exists(im_name):
+            continue
+        im.save(im_name, compression_level=0)
+
 
 def png_to_knossos(stack_dir, output_dir, knossos_config):
     if not os.path.exists(output_dir):
