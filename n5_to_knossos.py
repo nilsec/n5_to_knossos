@@ -49,19 +49,37 @@ def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
     pool.close()
     pool.join()
 
+def verify_image(im_path):
+    im = Image.open(im_path)
+    im_arr = np.array(im)
+    im.close()
+    if not im_arr.shape:
+        return False
+    return True
+
 def write_chunk(f, n, chunk_size, n_chunks, stack_dir, shape):
     data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
     effective_chunk_size = np.shape(data)[0]
     print(f"Chunk {n+1}/{n_chunks}")
-    for z in tqdm(range(effective_chunk_size)):
-        arr = data[z, :, :]
-        im = Image.fromarray(arr)
+    for z in tqdm(range(effective_chunk_size), position=n):
+        write_successful = False
+        tries = 0
         z_real = z + effective_chunk_size * n
         im_name = stack_dir + "/" + "0" * (len(str(shape[0])) - len(str(z_real)) + 1) + str(z_real) + ".png" 
         if os.path.exists(im_name):
             continue
-        im.save(im_name, compression_level=0)
 
+        while not write_successful and tries<10:
+            arr = data[z, :, :]
+            im = Image.fromarray(arr)
+            im.save(im_name, compression_level=0)
+            write_successful = verify_image(im_name)
+            tries += 1
+
+        if not write_succesful:
+            print("Write failed for z={}".format(z_real))
+            im = np.zeros(np.shape(data[z,:,:]), dtype=np.uint16)
+            im.save(im_name, compression_level=0)
 
 def png_to_knossos(stack_dir, output_dir, knossos_config):
     if not os.path.exists(output_dir):
@@ -69,7 +87,6 @@ def png_to_knossos(stack_dir, output_dir, knossos_config):
     config_flag = "-c {}".format(knossos_config)
     cmd = "knossos_cuber -f png {} {} {}".format(config_flag, stack_dir, output_dir)
     os.system(cmd)
-
 
 if __name__ == "__main__":
     args = parser.parse_args()
