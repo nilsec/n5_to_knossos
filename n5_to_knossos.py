@@ -2,7 +2,6 @@ import numpy as np
 import os
 from PIL import Image
 import zarr
-import time
 from tqdm import tqdm
 import argparse
 from multiprocessing import Pool
@@ -36,15 +35,15 @@ def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
         n_chunks += 1
 
     num_workers = n_chunks
-    pool = Pool(processes=num_workers)  # start 4 worker processes
+    pool = Pool(processes=num_workers) 
     result = []
     for n in range(n_chunks):
-        data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
-        effective_chunk_size = np.shape(data)[0]
-        result.append(pool.apply_async(write_chunk, (f,n,chunk_size,n_chunks,stack_dir,shape,)))
+        result.append(pool.apply_async(write_chunk, (input_file,dataset,n,chunk_size,
+                                                     n_chunks,stack_dir,shape,)))
 
     for res in result:
         res.get()
+    
 
     pool.close()
     pool.join()
@@ -57,7 +56,10 @@ def verify_image(im_path):
         return False
     return True
 
-def write_chunk(f, n, chunk_size, n_chunks, stack_dir, shape):
+def write_chunk(input_file, dataset, n, chunk_size, 
+                n_chunks, stack_dir, shape):
+    f = zarr.open(input_file, "r")[dataset]
+    shape = f.shape
     data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
     effective_chunk_size = np.shape(data)[0]
     print(f"Chunk {n+1}/{n_chunks}")
@@ -76,10 +78,11 @@ def write_chunk(f, n, chunk_size, n_chunks, stack_dir, shape):
             write_successful = verify_image(im_name)
             tries += 1
 
-        if not write_succesful:
+        if not write_successful:
             print("Write failed for z={}".format(z_real))
             im = np.zeros(np.shape(data[z,:,:]), dtype=np.uint16)
             im.save(im_name, compression_level=0)
+
 
 def png_to_knossos(stack_dir, output_dir, knossos_config):
     if not os.path.exists(output_dir):
