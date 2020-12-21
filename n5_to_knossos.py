@@ -35,12 +35,8 @@ def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
     if shape[0] % chunk_size != 0:
         n_chunks += 1
     for n in range(n_chunks):
-        try:
-            data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
-            effective_chunk_size = (n+1)*chunk_size - n*chunk_size
-        except: # Take care of edge case if chunk size is not divisible by volume size
-            data = np.array(f[n*chunk_size:, :,:])
-            effective_chunk_size = shape[0] - n*chunk_size
+        data = np.array(f[n*chunk_size:(n+1)*chunk_size, :,:])
+        effective_chunk_size = np.shape(data)[0]
         print(f"Chunk {n+1}/{n_chunks}")
         for z in tqdm(range(effective_chunk_size)):
             start = time.time()
