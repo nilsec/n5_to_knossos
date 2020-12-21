@@ -43,7 +43,6 @@ def n5_to_png(input_file, dataset, output_dir, chunk_size=500, verbose=False):
 
     for res in result:
         res.get()
-    
 
     pool.close()
     pool.join()
@@ -82,7 +81,6 @@ def write_chunk(input_file, dataset, n, chunk_size,
             print("Write failed for z={}".format(z_real))
             im = np.zeros(np.shape(data[z,:,:]), dtype=np.uint16)
             im.save(im_name, compression_level=0)
-
 
 def png_to_knossos(stack_dir, output_dir, knossos_config):
     if not os.path.exists(output_dir):
