@@ -65,7 +65,7 @@ def write_chunk(input_file, dataset, n, chunk_size,
     for z in tqdm(range(effective_chunk_size), position=n):
         write_successful = False
         tries = 0
-        z_real = z + effective_chunk_size * n
+        z_real = z + chunk_size * n
         im_name = stack_dir + "/" + "0" * (len(str(shape[0])) - len(str(z_real)) + 1) + str(z_real) + ".png" 
         if os.path.exists(im_name):
             continue
