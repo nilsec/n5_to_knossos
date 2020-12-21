@@ -1,11 +1,14 @@
 Convert n5 to knossos by converting to png stacks first (supported by cuber) and applying knossos cuber. Ugly but works.
 
-0. Install requirements 
+0. Install requirements:
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
-1. Install knossos cuber from here https://github.com/knossos-project/knossos_cuber
+1. Install knossos cuber:
+```
+pip3 install https://github.com/knossos-project/knossos_cuber/archive/master.zip
+```
 
 2. Modify knossos cuber config by setting 'scaling' and 'boundary' to the n5 resolution and shape respectively. Can be done automatically if n5 meta data is consistent. 
 
