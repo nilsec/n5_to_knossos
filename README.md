@@ -2,7 +2,7 @@ Convert n5 to knossos by converting to png stacks first (supported by cuber) and
 
 0. Install requirements:
 ```
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 1. Install knossos cuber:
